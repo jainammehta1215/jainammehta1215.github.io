@@ -248,6 +248,16 @@ footer{border-top:1px solid var(--rule-soft);padding:34px 0 44px}
 .foot p{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
 .foot .opinion{color:var(--red)}
 
+/* ---------- toast (mailto fallback) ---------- */
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,160%);z-index:70;
+  background:var(--ink);color:var(--paper);border-radius:2px;padding:14px 18px;
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;
+  display:flex;align-items:center;gap:16px;max-width:calc(100vw - 40px);flex-wrap:wrap;
+  box-shadow:0 12px 34px rgba(38,37,31,.28);
+  transition:transform .45s cubic-bezier(.3,.9,.3,1)}
+#toast.show{transform:translate(-50%,0)}
+#toast a{color:#E8A79B;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+
 /* ---------- responsive ---------- */
 @media(max-width:900px){
   body::after{display:none}
@@ -553,6 +563,11 @@ footer{border-top:1px solid var(--rule-soft);padding:34px 0 44px}
   </div>
 </footer>
 
+<div id="toast" role="status" aria-live="polite">
+  <span id="toast-msg"></span>
+  <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mehtajainam1215@gmail.com" target="_blank" rel="noopener">Open in Gmail ↗</a>
+</div>
+
 <script>
 (function(){
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -640,23 +655,51 @@ footer{border-top:1px solid var(--rule-soft);padding:34px 0 44px}
   window.addEventListener("scroll", tlScroll, {passive:true});
   tlScroll();
 
-  /* copy email */
+  /* shared email copy helper */
+  var MAIL = "mehtajainam1215@gmail.com";
+  function copyEmail(cb){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(MAIL).then(cb, cb);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = MAIL; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); }catch(e){}
+      document.body.removeChild(ta); cb();
+    }
+  }
+
+  /* toast */
+  var toast = document.getElementById("toast");
+  var toastMsg = document.getElementById("toast-msg");
+  var toastTimer = null;
+  function showToast(msg){
+    toastMsg.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 7000);
+  }
+
+  /* copy email card */
   var copyBtn = document.getElementById("copy-mail");
   var copyK = document.getElementById("copy-k");
   copyBtn.addEventListener("click", function(){
-    var mail = "mehtajainam1215@gmail.com";
-    function done(){
+    copyEmail(function(){
       copyK.textContent = "Copied ✓";
       setTimeout(function(){ copyK.textContent = "Copy email"; }, 2000);
-    }
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(mail).then(done);
-    } else {
-      var ta = document.createElement("textarea");
-      ta.value = mail; document.body.appendChild(ta); ta.select();
-      try{ document.execCommand("copy"); done(); }catch(e){}
-      document.body.removeChild(ta);
-    }
+    });
+  });
+
+  /* mailto fallback: if no mail app opens, copy the address and say so */
+  document.querySelectorAll('a[href^="mailto:"]').forEach(function(a){
+    a.addEventListener("click", function(){
+      setTimeout(function(){
+        if(document.hasFocus() && document.visibilityState === "visible"){
+          copyEmail(function(){
+            showToast("No mail app opened — address copied to your clipboard ✓");
+          });
+        }
+      }, 900);
+    });
   });
 })();
 </script>
